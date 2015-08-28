@@ -1,0 +1,210 @@
+name: "lnet"
+force_backward: true
+
+input: "data"
+input_dim: 1
+input_dim: 512
+input_dim: 46
+input_dim: 46
+
+input: "map"
+input_dim: 1
+input_dim: 3
+input_dim: 46
+input_dim: 46
+
+#layer {
+#  bottom: "map"
+#  top: "norm_map" 
+#  name: "mvn1"
+#  type: "MVN"
+#}
+
+layer {
+  bottom: "map"
+  top: "conv5_map1"
+  name: "conv5_map1"
+  type: "Convolution"
+  param { lr_mult: 200 decay_mult: 0 }
+  param { lr_mult: 400 decay_mult: 0 }
+  convolution_param {
+    num_output: 1
+    pad: 5
+    kernel_size: 11 #11
+    weight_filler {
+      type: "gaussian"
+      std: 1e-3 #3
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+
+layer {
+  bottom: "conv5_map1"
+  top: "conv5_out1"
+  top: "conv5_h1"
+  name: "conv5_split1"
+  type: "Split"
+} 
+
+
+##########################################33
+
+#layer {
+#  bottom: "data"
+#  top: "norm_data" 
+#  name: "mvn1"
+#  type: "MVN"
+#}
+
+layer { 
+  bottom: "data"
+  top: "drop_data"
+  name: "drop_data"
+  type: "Dropout"
+  dropout_param {
+    dropout_ratio: 0.6
+  }
+}
+
+
+layer {
+  bottom: "drop_data"
+  top: "conv5_f1"
+  name: "conv5_f1"
+  type: "Convolution"
+  param { lr_mult: 1 decay_mult: 5 }
+  param { lr_mult: 2 decay_mult: 0 }
+  convolution_param {
+    num_output: 32
+    pad: 4
+    kernel_size: 9
+    weight_filler {
+      type: "gaussian"
+      std: 1e-7
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+
+
+
+layer { 
+  bottom: "conv5_f1"
+  top: "conv5_f1"
+  name: "relu5_f1"
+  type: "ReLU"
+}
+
+layer {
+  bottom: "conv5_f1"
+  top: "conv5_f2"
+  name: "conv5_f2"
+  type: "Convolution"
+  param { lr_mult: 1 decay_mult: 5 }
+  param { lr_mult: 2 decay_mult: 0 }
+  convolution_param {
+    num_output: 1
+    pad: 2
+    kernel_size: 5
+    weight_filler {
+      type: "gaussian"
+      std: 1e-7
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+  bottom: "conv5_f2"
+  top: "conv5_out2"
+  top: "conv5_h2"
+  name: "conv5_split2"
+  type: "Split"
+}
+#######################################
+
+#layer {
+#  bottom: "conv5_h1"
+#  top: "norm_conv5_h1" 
+#  name: "mvn1"
+#  type: "MVN"
+#}
+#layer {
+#  bottom: "conv5_h2"
+#  top: "norm_conv5_h2" 
+#  name: "mvn1"
+#  type: "MVN"
+#}
+
+layer {
+  bottom: "conv5_h1"
+  top: "conv5_h1-o"
+  name: "conv5_h1-o"
+  type: "Convolution"
+  param { lr_mult: 100 decay_mult: 0 }
+  param { lr_mult: 200 decay_mult: 0 }
+  convolution_param {
+    num_output: 1
+    kernel_size: 1
+    weight_filler {
+      type: "gaussian"
+      std: 1e-3 #-7
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+  bottom: "conv5_h2"
+  top: "conv5_h2-o"
+  name: "conv5_h2-o"
+  type: "Convolution"
+  param { lr_mult: 100 decay_mult: 0 }
+  param { lr_mult: 200 decay_mult: 0 }
+  convolution_param {
+    num_output: 1
+    kernel_size: 1
+    weight_filler {
+      type: "gaussian"
+      std: 1e-3 #-7
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+ bottom: "conv5_h2-o"
+ bottom: "conv5_h1-o"
+ top: "conv5_out3"
+ type: "Eltwise"
+ eltwise_param {
+  operation: SUM # PROD=0 SUM=1 MAX=2;
+  coeff: 1;
+  coeff: 1;
+ }
+}
+
+#layer {
+#  bottom: "conv5_h2"
+#  bottom: "conv5_h1"
+#  top: "conv5_conc"
+#  type: "Concat"
+#}
+
