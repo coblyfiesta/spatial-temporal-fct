@@ -166,9 +166,9 @@ for im2_id = im1_id:fnum
             
         end
         
-        l_pre_map_test = 0.4*l_pre_map_test.*max(0, 1-appearance_conf/appearance_conf_ave) + l_pre_map_a;
-%         l_pre_map_test  = l_pre_map_a;
-        
+        l_pre_map_test = 0.3*l_pre_map_test.*max(0, 1-appearance_conf/appearance_conf_ave) + l_pre_map_a;
+        l_pre_map_test  = (l_pre_map_test - min(l_pre_map_test(:))).*(l_pre_map_a - min(l_pre_map_a(:)));
+        l_pre_map_test = l_pre_map_a;
         
 %         l_pre_map_train = l_pre_map{3}; l_pre_map_train = (single(l_pre_map_train>0).*l_pre_map_train).^0.5;
         l_pre_map_train = l_pre_map_test;
@@ -199,7 +199,7 @@ for im2_id = im1_id:fnum
     %% local scale estimation
     scale_param.currentScaleFactor = 1;
     recovered_scale = (scale_param.number_of_scales_test+1)/2;
-    if appearance_conf > appearance_conf_ave * 0.2
+%     if appearance_conf > appearance_conf_ave * 0.2
         base_location_l = [l_x - location(3)/2, l_y - location(4)/2, location([3,4])];
         
         roi2 = ext_roi(im2, base_location_l, l2_off,  roi_size, s2);
@@ -215,7 +215,7 @@ for im2_id = im1_id:fnum
         recovered_scale = scale_param.number_of_scales_test + 1 - recovered_scale;
         % update the scale
         scale_param.currentScaleFactor = scale_param.scaleFactors_test(recovered_scale);
-    end
+%     end
     target_sz = location([3, 4]) * scale_param.currentScaleFactor;
     location = [l_x - floor(target_sz(1)/2), l_y - floor(target_sz(2)/2), target_sz(1), target_sz(2)];
     t = t + toc;
@@ -254,7 +254,7 @@ for im2_id = im1_id:fnum
       end   
     
     %% Update lnet and gnet
-    if recovered_scale ~= (scale_param.number_of_scales_test+1)/2 && appearance_conf > appearance_conf_ave*0.2%&& location_distance < 10%rand(1)>0.1%mod(im2_id, 1) == 0
+    if recovered_scale ~= (scale_param.number_of_scales_test+1)/2 %&& appearance_conf > appearance_conf_ave*0.2%&& location_distance < 10%rand(1)>0.1%mod(im2_id, 1) == 0
 %         l_off = location_last(1:2)-location(1:2);
 %         map2 = GetMap(size(im2), fea_sz, roi_size, floor(location), floor(l_off), s2, pf_param.map_sigma_factor, 'trans_gaussian');
         
@@ -266,6 +266,8 @@ for im2_id = im1_id:fnum
         lfeas = bsxfun(@times, lfeas, cos_win);
         l_off = location_last(1:2)-location(1:2);
         map2 = GetMap(size(im2), fea_sz, roi_size, floor([location(1:2), location_last(3:4)]), floor(l_off), s2, pf_param.map_sigma_factor, 'trans_gaussian');
+        map2 = GetMap(size(im2), fea_sz, roi_size, floor(location), [0,0], s2, pf_param.map_sigma_factor, 'trans_gaussian');
+
 %         map2 = map2.*double(map2 == max(map2(:)));
 %         map2 = get_gaussain(map2);
         
@@ -279,7 +281,7 @@ for im2_id = im1_id:fnum
         gsolver.net.set_input_dim([0, scale_param.number_of_scales_train, fea_sz(3), fea_sz(2), fea_sz(1)]);
         
         fea2_train_l{1}(:,:,:,1) = lfea1;
-        fea2_train_l{1}(:,:,:,2) = lfea2;
+        fea2_train_l{1}(:,:,:,2) = lfeas;
         fea2_train_l{2}(:,:,:,1) = single(zeros(fea_sz(1), fea_sz(2), 3, 1));
         fea2_train_l{2}(:,:,:,2) = pre_maps;
         
@@ -310,7 +312,7 @@ for im2_id = im1_id:fnum
             diff_l{3}(:,:,:,2) = single(zeros(fea_sz(1), fea_sz(2), 1, 1));
         else
             diff_l{3}(:,:,:,2) = 0.5*(l_pre_map{3}(:,:,:,2)-permute(single(map2), [2,1,3]));
-%             diff_l{3}(:,:,:,2) = single(zeros(fea_sz(1), fea_sz(2), 1, 1));
+            diff_l{3}(:,:,:,2) = single(zeros(fea_sz(1), fea_sz(2), 1, 1));
         end
         
 
@@ -322,7 +324,7 @@ for im2_id = im1_id:fnum
         lsolver.net.set_input_dim([0, 1, fea_sz(3), fea_sz(2), fea_sz(1); 1, 1, 3, fea_sz(2), fea_sz(1)]);
 %         lsolver.net.set_input_dim([1, 1, 3, fea_sz(2), fea_sz(1)]);
         gsolver.net.set_input_dim([0, scale_param.number_of_scales_test, fea_sz(3), fea_sz(2), fea_sz(1)]);
-    elseif rand(1)>0.5 && appearance_conf>appearance_conf_ave*0.5%&& location_distance < 10
+    elseif rand(1)>0.5 %&& appearance_conf>appearance_conf_ave*0.5%&& location_distance < 10
 %         roi2 = ext_roi(im2, location, l2_off,  roi_size, s2);
 %         roi2 = impreprocess(roi2);
 %         feature_input.set_data(single(roi2));
@@ -331,6 +333,7 @@ for im2_id = im1_id:fnum
 %         lfea2 = bsxfun(@times, lfea2, cos_win);
         l_off = location_last(1:2)-location(1:2);
         map2 = GetMap(size(im2), fea_sz, roi_size, floor([location(1:2), location_last(3:4)]), floor(l_off), s2, pf_param.map_sigma_factor, 'trans_gaussian');
+        map2 = GetMap(size(im2), fea_sz, roi_size, floor(location), [0,0], s2, pf_param.map_sigma_factor, 'trans_gaussian');
 %         map2 = map2.*double(map2 == max(map2(:)));
 %         map2 = get_gaussain(map2);
         
@@ -341,7 +344,7 @@ for im2_id = im1_id:fnum
 %         lsolver.net.set_input_dim([1, 2, 3, fea_sz(2), fea_sz(1)]);
         
         fea2_train_l{1}(:,:,:,1) = lfea1;
-        fea2_train_l{1}(:,:,:,2) = lfea2;
+        fea2_train_l{1}(:,:,:,2) = lfeas;
         
         fea2_train_l{2}(:,:,:,1) = single(zeros(fea_sz(1), fea_sz(2), 3, 1));
         fea2_train_l{2}(:,:,:,2) = pre_maps;
@@ -355,8 +358,8 @@ for im2_id = im1_id:fnum
             diff_l{1}(:,:,:,2) = 0.5*(l_pre_map{1}(:,:,:,2)-permute(single(map2), [2,1,3]));
         end
     
-        diff_l{2}(:,:,:,1) = 0.5*(l_pre_map{2}(:,:,:,1)-permute(single(map1), [2,1,3])) * 1;
-        diff_l{2}(:,:,:,2) = 0.5*(l_pre_map{2}(:,:,:,2)-permute(single(map2), [2,1,3])) * 1;
+        diff_l{2}(:,:,:,1) = 0.5*(l_pre_map{2}(:,:,:,1)-permute(single(map1), [2,1,3]));
+        diff_l{2}(:,:,:,2) = 0.5*(l_pre_map{2}(:,:,:,2)-permute(single(map2), [2,1,3]));
         
         diff_l{3}(:,:,:,1) = single(zeros(fea_sz(1), fea_sz(2), 1, 1));
         if im2_id <= 4
@@ -406,63 +409,64 @@ for im2_id = im1_id:fnum
         end
         close 100;
         %% ===========================================================
-        fea2_train_l = {};
-        diff_l = {};
-        fea2_train_l{1}(:,:,:,1) = lfea2;
-        fea2_train_l{2}(:,:,:,1) = pre_maps;
-        for iter = 1:100
-            lsolver.net.empty_net_param_diff();
-            l_pre_map = lsolver.net.forward(fea2_train_l);
-            
-            diff_l{1}(:,:,:,1) = (l_pre_map{1}(:,:,:,1)-permute(single(map2), [2,1,3]));
-            
-%             diff_l{2}(:,:,:,1) = single(zeros(fea_sz(1), fea_sz(1), 1, 1));
-            diff_l{2}(:,:,:,1) = (l_pre_map{2}(:,:,:,1)-permute(single(map2), [2,1,3]));
-            
-            diff_l{3}(:,:,:,1) = (l_pre_map{3}(:,:,:,1)-permute(single(map2), [2,1,3]));
-%             diff_l{3}(:,:,:,1) = single(zeros(fea_sz(1), fea_sz(1), 1, 1));
-            figure(100);
-            subplot(1,2,1); imagesc(permute(l_pre_map{1}(:,:,:,1), [2,1,3,4]));
-            subplot(1,2,2); imagesc(permute(l_pre_map{3}(:,:,:,1), [2,1,3,4]));
-            
-            lsolver.net.backward(diff_l);
-            lsolver.apply_update();
-            fprintf('fianl error: %f \n', sum(abs(diff_l{3}(:))));
-        end
-        close 100;
-         a_conf_thr = max(l_pre_map{2}(:))/2;
+%         fea2_train_l = {};
+%         diff_l = {};
+%         fea2_train_l{1}(:,:,:,1) = lfea2;
+%         fea2_train_l{2}(:,:,:,1) = pre_maps;
+%         for iter = 1:100
+%             lsolver.net.empty_net_param_diff();
+%             l_pre_map = lsolver.net.forward(fea2_train_l);
+%             
+%             diff_l{1}(:,:,:,1) = (l_pre_map{1}(:,:,:,1)-permute(single(map2), [2,1,3]));
+%             
+% %             diff_l{2}(:,:,:,1) = single(zeros(fea_sz(1), fea_sz(1), 1, 1));
+%             diff_l{2}(:,:,:,1) = (l_pre_map{2}(:,:,:,1)-permute(single(map2), [2,1,3]));
+%             
+%             diff_l{3}(:,:,:,1) = (l_pre_map{3}(:,:,:,1)-permute(single(map2), [2,1,3]));
+% %             diff_l{3}(:,:,:,1) = single(zeros(fea_sz(1), fea_sz(1), 1, 1));
+%             figure(100);
+%             subplot(1,2,1); imagesc(permute(l_pre_map{1}(:,:,:,1), [2,1,3,4]));
+%             subplot(1,2,2); imagesc(permute(l_pre_map{3}(:,:,:,1), [2,1,3,4]));
+%             
+%             lsolver.net.backward(diff_l);
+%             lsolver.apply_update();
+%             fprintf('fianl error: %f \n', sum(abs(diff_l{3}(:))));
+%         end
+%         close 100;
+%          a_conf_thr = max(l_pre_map{2}(:))/2;
 % %          a_conf_thr = compute_conf(l_pre_map{2})/2;
         %% ===========================================================
     end
     %% ============================================================================
         %% ===================Train motion features every frame========================================
-        if im2_id >=5
-            l_off = location_last(1:2)-location(1:2);
-            map2 = GetMap(size(im2), fea_sz, roi_size, floor([location(1:2), location_last(3:4)]), floor(l_off), s2, pf_param.map_sigma_factor, 'trans_gaussian');
-%             map2 = map2.*double(map2 == max(map2(:)));
-%             map2 = get_gaussain(map2);
-            
-            lsolver.net.set_net_phase('train');
-            
-            fea2_train_l = {};
-            diff_l = {};
-            fea2_train_l{1}(:,:,:,1) = lfea2;
-            fea2_train_l{2}(:,:,:,1) = pre_maps;
-            
-            lsolver.net.empty_net_param_diff();
-            l_pre_map = lsolver.net.forward(fea2_train_l);
-            
-            diff_l{1}(:,:,:,1) = (l_pre_map{1}(:,:,:,1)-permute(single(map2), [2,1,3]));
-            
-            diff_l{2}(:,:,:,1) = single(zeros(fea_sz(1), fea_sz(1), 1, 1));
-            %             diff_l{2}(:,:,:,1) = (l_pre_map{2}(:,:,:,1)-permute(single(map2), [2,1,3]));
-            
-            %             diff_l{3}(:,:,:,1) = (l_pre_map{3}(:,:,:,1)-permute(single(map2), [2,1,3]));
-            diff_l{3}(:,:,:,1) = single(zeros(fea_sz(1), fea_sz(1), 1, 1));
-            
-            lsolver.net.backward(diff_l);
-            lsolver.apply_update();
-        end
+%         if im2_id >=5
+%             l_off = location_last(1:2)-location(1:2);
+%             map2 = GetMap(size(im2), fea_sz, roi_size, floor([location(1:2), location_last(3:4)]), floor(l_off), s2, pf_param.map_sigma_factor, 'trans_gaussian');
+% %             map2 = map2.*double(map2 == max(map2(:)));
+% %             map2 = get_gaussain(map2);
+%             
+%             lsolver.net.set_net_phase('train');
+%             
+%             fea2_train_l = {};
+%             diff_l = {};
+%             fea2_train_l{1}(:,:,:,1) = lfea2;
+%             fea2_train_l{2}(:,:,:,1) = pre_maps;
+%             for i = 1:10
+%                 lsolver.net.empty_net_param_diff();
+%                 l_pre_map = lsolver.net.forward(fea2_train_l);
+%                 
+%                 diff_l{1}(:,:,:,1) = (l_pre_map{1}(:,:,:,1)-permute(single(map2), [2,1,3]));
+%                 
+%                 diff_l{2}(:,:,:,1) = single(zeros(fea_sz(1), fea_sz(1), 1, 1));
+%                 %             diff_l{2}(:,:,:,1) = (l_pre_map{2}(:,:,:,1)-permute(single(map2), [2,1,3]));
+%                 
+%                 %             diff_l{3}(:,:,:,1) = (l_pre_map{3}(:,:,:,1)-permute(single(map2), [2,1,3]));
+%                 diff_l{3}(:,:,:,1) = single(zeros(fea_sz(1), fea_sz(1), 1, 1));
+%                 
+%                 lsolver.net.backward(diff_l);
+%                 lsolver.apply_update();
+%             end
+%         end
          %% ===========================================================
     pre_maps = cat(3, l_pre_map_train, pre_maps(:, :, 1:2, 1));
     positions(im2_id, :) = location;

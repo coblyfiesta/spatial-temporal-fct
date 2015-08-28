@@ -25,8 +25,8 @@ layer {
   top: "conv5_map1"
   name: "conv5_map1"
   type: "Convolution"
+  param { lr_mult: 100 decay_mult: 0 }
   param { lr_mult: 200 decay_mult: 0 }
-  param { lr_mult: 400 decay_mult: 0 }
   convolution_param {
     num_output: 1
     pad: 5
